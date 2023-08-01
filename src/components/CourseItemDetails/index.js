@@ -1,106 +1,103 @@
 import {Component} from 'react'
-
-import {Link} from 'react-router-dom'
-
 import Loader from 'react-loader-spinner'
-
-import {Nel, Logo, View, Vi, Vd, FailCon, FailIm, Fh, Fp, Fb, Vh} from './style'
+import FailureView from '../FailureView'
 
 import './index.css'
 
-const apStatus = {
-  initial: 'initial',
-  loading: 'loading',
-  success: 'success',
-  fail: 'fail',
+const apiStatusConstants = {
+  initial: 'INITIAL',
+  success: 'SUCCESS',
+  failure: 'FAILURE',
+  inProgress: 'IN_PROGRESS',
 }
 
 class CourseItemDetails extends Component {
-  state = {course: {}, ap: apStatus.initial}
-
-  componentDidMount() {
-    this.getItem()
+  state = {
+    courseDetails: {},
+    apiStatus: apiStatusConstants.initial,
   }
 
-  getItem = async () => {
-    this.setState({ap: apStatus.loading})
+  componentDidMount() {
+    this.getCourseDetails()
+  }
+
+  getCourseDetails = async () => {
+    this.setState({
+      apiStatus: apiStatusConstants.inProgress,
+    })
 
     const {match} = this.props
     const {params} = match
     const {id} = params
-    const url = `https://apis.ccbp.in/te/courses/${id}`
+
+    const apiUrl = `https://apis.ccbp.in/te/courses/${id}`
     const options = {
-      method: 'Get',
+      method: 'GET',
     }
-    const res = await fetch(url, options)
-    if (res.ok === true) {
-      const dat = await res.json()
-      const updateCourse = {
-        id: dat.course_details.id,
-        name: dat.course_details.name,
-        imageUrl: dat.course_details.image_url,
-        description: dat.course_details.description,
+
+    const response = await fetch(apiUrl, options)
+
+    if (response.ok) {
+      const data = await response.json()
+      const fetchedData = {
+        id: data.course_details.id,
+        name: data.course_details.name,
+        imageUrl: data.course_details.image_url,
+        description: data.course_details.description,
       }
-      this.setState({course: updateCourse, ap: apStatus.success})
+
+      console.log(fetchedData)
+
+      this.setState({
+        courseDetails: fetchedData,
+        apiStatus: apiStatusConstants.success,
+      })
     } else {
-      this.setState({ap: apStatus.fail})
+      this.setState({
+        apiStatus: apiStatusConstants.failure,
+      })
     }
   }
 
-  successView = () => {
-    const {course} = this.state
+  renderCourseDetails = () => {
+    const {courseDetails} = this.state
+    const {imageUrl, name, description} = courseDetails
+
     return (
-      <div className="cr">
-        <View>
-          <Vi src={course.imageUrl} alt={course.name} />
-          <div>
-            <Vh>{course.name}</Vh>
-            <Vd>{course.description}</Vd>
-          </div>
-        </View>
+      <div className="course-container">
+        <img src={imageUrl} alt={name} className="course-details-image" />
+        <div className="course-details-name-and-description">
+          <h1 className="course-details-heading">{name}</h1>
+          <p className="course-details-description">{description}</p>
+        </div>
       </div>
     )
   }
 
-  loadingView = () => (
-    <div data-testid="loader" className="loader-con">
-      <Loader type="ThreeDots" color="#00BFFF" height={50} width={50} />
+  retryButtonClicked = () => {
+    this.getCourseDetails()
+  }
+
+  renderFailureView = () => (
+    <FailureView retryButtonClicked={this.retryButtonClicked} />
+  )
+
+  renderLoadingView = () => (
+    <div data-testid="loader" className="courses-details-loader">
+      <Loader type="ThreeDots" color="#4656a1" height="50" width="50" />
     </div>
   )
 
-  failView = () => (
-    <div>
-      <Link to="/" className="link-el">
-        <Nel>
-          <Logo
-            src="https://assets.ccbp.in/frontend/react-js/tech-era/website-logo-img.png"
-            alt="website logo"
-          />
-        </Nel>
-      </Link>
-      <FailCon>
-        <FailIm
-          src="https://assets.ccbp.in/frontend/react-js/tech-era/failure-img.png"
-          alt="failure view"
-        />
-        <Fh>Oops! Something Went wRONG</Fh>
-        <Fp>We cannot seem to find the page you are looking for</Fp>
-        <Fb type="button" onClick={this.getItem}>
-          Retry
-        </Fb>
-      </FailCon>
-    </div>
-  )
+  renderPageDetailsView = () => {
+    const {apiStatus} = this.state
 
-  finalRender = () => {
-    const {ap} = this.state
-    switch (ap) {
-      case apStatus.loading:
-        return this.loadingView()
-      case apStatus.success:
-        return this.successView()
-      case apStatus.fail:
-        return this.failView()
+    switch (apiStatus) {
+      case apiStatusConstants.success:
+        return this.renderCourseDetails()
+      case apiStatusConstants.failure:
+        return this.renderFailureView()
+      case apiStatusConstants.inProgress:
+        return this.renderLoadingView()
       default:
         return null
     }
@@ -108,16 +105,8 @@ class CourseItemDetails extends Component {
 
   render() {
     return (
-      <div>
-        <Link to="/" className="link-el">
-          <Nel>
-            <Logo
-              src="https://assets.ccbp.in/frontend/react-js/tech-era/website-logo-img.png"
-              alt="website logo"
-            />
-          </Nel>
-        </Link>
-        <div>{this.finalRender()}</div>
+      <div className="course-details-container">
+        {this.renderPageDetailsView()}
       </div>
     )
   }
